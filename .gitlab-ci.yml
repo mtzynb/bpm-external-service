@@ -1,0 +1,107 @@
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://172.20.9.107:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_REGISTRY_IMAGE_DEV: bss-reg.sf.faraborddi.dc:8083/bss/dev/$CI_PROJECT_NAME:latest
+  DOCKER_REGISTRY_IMAGE_STAGING: bss-reg.sf.faraborddi.dc:8083/bss/staging/$CI_PROJECT_NAME:latest
+  DOCKER_REGISTRY_IMAGE_MASTER: bss-reg.sf.faraborddi.dc:8083/bss/master/$CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA
+  GIT_STRATEGY: clone
+
+  stages:
+    - build
+    - push-dev
+    - push-staging
+    - push-prod
+    - deploy-dev
+    - deploy-staging
+    - deploy-production
+
+  build:
+    stage: build
+    tags:
+      - BACKEND
+    image: bss-reg.sf.faraborddi.dc:8083/maven:3.3.9-alpine
+    script:
+      - mvn package -DskipTests
+    after_script:
+      - cp docker/* target/
+    artifacts:
+      paths:
+        - target/
+      expire_in: 30m
+
+  ####### Pushes
+  push-development:
+    stage: push-dev
+    tags:
+      - BACKEND
+    image: bss-reg.sf.faraborddi.dc:8083/docker:dind
+    before_script:
+      - docker login -u bss -p $PUSH_CI_TOKEN bss-reg.sf.faraborddi.dc:8083
+    script:
+      - cd target/
+      - docker build -t $DOCKER_REGISTRY_IMAGE_DEV .
+      - docker push $DOCKER_REGISTRY_IMAGE_DEV
+    only:
+      - dev
+
+  push-stage:
+    stage: push-staging
+    tags:
+      - BACKEND
+    image: bss-reg.sf.faraborddi.dc:8083/docker:dind
+    before_script:
+      - docker login -u bss -p $PUSH_CI_TOKEN bss-reg.sf.faraborddi.dc:8083
+    script:
+      - cd target/
+      - docker build -t $DOCKER_REGISTRY_IMAGE_STAGING .
+      - docker push $DOCKER_REGISTRY_IMAGE_STAGING
+    only:
+      - staging
+
+  push-production:
+    stage: push-prod
+    tags:
+      - BACKEND
+    image: bss-reg.sf.faraborddi.dc:8083/docker:dind
+    before_script:
+      - docker login -u bss -p $PUSH_CI_TOKEN bss-reg.sf.faraborddi.dc:8083
+    script:
+      - cd target/
+      - docker build -t $DOCKER_REGISTRY_IMAGE_MASTER .
+      - docker tag $DOCKER_REGISTRY_IMAGE_MASTER bss-reg.sf.faraborddi.dc:8083/bss/master/$CI_PROJECT_NAME:latest
+      - docker push $DOCKER_REGISTRY_IMAGE_MASTER
+      - docker push bss-reg.sf.faraborddi.dc:8083/bss/master/$CI_PROJECT_NAME:latest
+    only:
+      - master
+
+  ###### Deploy
+  deploy-development:
+    stage: deploy-dev
+    tags:
+      - BACKEND
+    image: bss-reg.sf.faraborddi.dc:8083/bss/basecd:latest
+    script:
+      - ssh -o StrictHostKeyChecking=no -t root@172.20.9.64 "/opt/bss/deploy-dev.sh $CI_PROJECT_NAME"
+    only:
+      - dev
+
+  deploy-stage:
+    stage: deploy-staging
+    tags:
+      - BACKEND
+    image: bss-reg.sf.faraborddi.dc:8083/bss/basecd:latest
+    script:
+      - ssh -o StrictHostKeyChecking=no -t root@172.20.9.162 "/opt/bss/deploy-staging.sh $CI_PROJECT_NAME"
+    only:
+      - staging
+
+  deploy-production:
+    stage: deploy-production
+    tags:
+      - BACKEND
+    image: bss-reg.sf.faraborddi.dc:8083/bss/basecd:latest
+    script:
+      - ssh -o StrictHostKeyChecking=no -t root@172.20.9.66 "/opt/bss/swarm/deploy-prod.sh $CI_PROJECT_NAME"
+    only:
+      - master
