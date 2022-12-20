@@ -37,10 +37,17 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.springframework.cloud:spring-cloud-starter-config")
+//    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("io.projectreactor:reactor-test")
+    testImplementation("io.mockk:mockk:1.13.3")
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        exclude(module = "junit")
+        exclude(module = "junit-vintage-engine")
+        exclude(module = "mockito-core")
+    }
+//    testImplementation("io.projectreactor:reactor-test")
+
 }
 
 dependencyManagement {
@@ -59,6 +66,7 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
 
 /*tasks.named<BootBuildImage>("bootBuildImage") {
     environment.set(

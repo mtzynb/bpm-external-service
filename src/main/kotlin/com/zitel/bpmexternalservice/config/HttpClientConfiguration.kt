@@ -1,7 +1,7 @@
 package com.zitel.bpmexternalservice.config
 
-import com.zitel.bpmexternalservice.common.BssServiceClient
-import com.zitel.bpmexternalservice.common.auth.AuthServiceClient
+import com.zitel.bpmexternalservice.client.bss.BssServiceClient
+import com.zitel.bpmexternalservice.client.auth.AuthServiceClient
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.reactive.function.client.WebClient
